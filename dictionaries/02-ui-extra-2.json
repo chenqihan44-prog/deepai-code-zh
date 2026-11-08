@@ -1,0 +1,23 @@
+{
+	"__meta": {
+		"part": "用户截图反馈 · 第二批（电脑/浏览器访问说明、归档提示、工具面板、会话菜单、新聊天首屏）",
+		"note": "Tools / Files / Changes / Pull requests / Device 这几个短标签有可能是工具项的标识或标题字段。若重开后工作区标签打不开或显示空白，删掉本文件重新 apply 即可回退。"
+	},
+	"Select this Mac's local environment in the desktop app to configure computer access. Remote environments, project overrides and other operating systems are not supported.": "请在桌面应用中选择这台 Mac 的本地环境以配置电脑访问。不支持远程环境、项目级覆盖以及其他操作系统。",
+	"Allow agents to use the shared browser. Projects can override it.": "允许智能体使用共享浏览器。项目可以覆盖此设置。",
+	"Chats archived on connected environments will appear here. Cloud archives are listed above.": "在已连接环境中归档的聊天会显示在这里。云端归档列在上方。",
+	"Tools": "工具",
+	"Files": "文件",
+	"Changes": "更改",
+	"Pull requests": "拉取请求",
+	"Device": "设备",
+	"Suggested": "建议",
+	"Summarize into new chat": "总结为新聊天",
+	"Snooze": "暂缓",
+	"Initialize Git": "初始化 Git",
+	"Context usage has not been reported yet.": "尚未报告上下文用量。",
+	"What should we work on?": "想做点什么？",
+	"No project": "无项目",
+	"Ask for changes, send follow-ups, or attach images": "提出修改、追问，或附加图片",
+	"Browser": "浏览器"
+}

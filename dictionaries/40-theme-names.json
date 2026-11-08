@@ -1,0 +1,13 @@
+{
+	"__meta": {
+		"part": "主题名称（可选文件）",
+		"note": "只翻译通用词形式的主题名；DeepAI Modern / Solarized / Windows 95 属产品名或业界通用名，刻意保留英文。若发现主题保存或切换异常，删掉本文件重新 apply 即可。"
+	},
+	"Rose": "玫瑰",
+	"Grove": "林间",
+	"Ocean": "海洋",
+	"Ember": "余烬",
+	"Iris": "鸢尾",
+	"Modern": "现代",
+	"Matrix": "矩阵"
+}

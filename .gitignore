@@ -1,0 +1,7 @@
+# 生成物：官方应用的汉化归档（196MB，GitHub 100MB 上限，且不分发官方文件）
+server-zh.asar
+# 打包中间目录与分发 zip（node bin/pack.mjs 生成）
+.pack/
+dist/
+# 临时文件
+*.bak

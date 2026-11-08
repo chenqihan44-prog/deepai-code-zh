@@ -1,0 +1,7 @@
+{
+	"$comment": "DeepAI Code 桌面版版本与词典可用性。词典中的英文 key 复用自已验证的日语补丁（0.3.19 / 0.3.20 实测通过），中文值本身尚未在真机验证。未列出的版本会被拒绝，可用 --force 强制尝试。",
+	"supported": {
+		"0.3.19": { "status": "keys-tested-ja", "dictionaryRevision": 1 },
+		"0.3.20": { "status": "keys-tested-ja", "dictionaryRevision": 1 }
+	}
+}

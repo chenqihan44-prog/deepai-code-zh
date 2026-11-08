@@ -1,0 +1,12 @@
+{
+	"__meta": { "part": "工作区标签页右键菜单与分屏" },
+	"Split left": "向左分屏",
+	"Split right": "向右分屏",
+	"Split": "分屏",
+	"Close tab": "关闭标签页",
+	"Close other tabs": "关闭其他标签页",
+	"Close tabs to the right": "关闭右侧标签页",
+	"Unsplit all tabs": "取消所有分屏",
+	"Close split group": "关闭分屏组",
+	"Split view navigation": "分屏视图导航"
+}
