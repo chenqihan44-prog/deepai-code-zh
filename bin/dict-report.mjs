@@ -36,17 +36,24 @@ console.log('---');
 console.log('dictionary files     ', files.length);
 console.log('dictionary entries   ', total, '(+' + kb + ' keybinding titles)');
 
+// 日语参考副本不进仓库（也不进分发 zip）：没有它时跳过「未翻译 key」统计，
+// 其余检查（条数、危险项、重复 key）照常执行。
 let jaTotal = 0;
 const missing = [];
-for (const f of fs.readdirSync(jaDir).filter((f) => f.endsWith('.json') && !f.startsWith('_'))) {
-	const d = JSON.parse(fs.readFileSync(path.join(jaDir, f), 'utf8'));
-	for (const k of Object.keys(d)) {
-		if (k === '__meta') continue;
-		jaTotal++;
-		if (all[k] === undefined) missing.push(f + ' :: ' + k);
+if (fs.existsSync(jaDir)) {
+	for (const f of fs.readdirSync(jaDir).filter((f) => f.endsWith('.json') && !f.startsWith('_'))) {
+		const d = JSON.parse(fs.readFileSync(path.join(jaDir, f), 'utf8'));
+		for (const k of Object.keys(d)) {
+			if (k === '__meta') continue;
+			jaTotal++;
+			if (all[k] === undefined) missing.push(f + ' :: ' + k);
+		}
 	}
+	console.log('ja source entries    ', jaTotal);
+	console.log('untranslated keys    ', missing.length, '(' + (100 * (1 - missing.length / jaTotal)).toFixed(1) + '% covered)');
+	if (missing.length) console.log(missing.slice(0, 40).join('\n'));
+} else {
+	console.log('ja source entries     skipped（未找到 ' + jaDir + '，跳过日语原文比对）');
+	console.log('untranslated keys     skipped（同上；把 ja-patch 克隆到该路径后可恢复覆盖率统计）');
 }
-console.log('ja source entries    ', jaTotal);
-console.log('untranslated keys    ', missing.length, '(' + (100 * (1 - missing.length / jaTotal)).toFixed(1) + '% covered)');
-if (missing.length) console.log(missing.slice(0, 40).join('\n'));
 console.log('PROBLEMS:', problems.length ? JSON.stringify(problems.slice(0, 25), null, 1) : 'none');

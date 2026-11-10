@@ -14,6 +14,7 @@
 - **向导支持未验证版本**：装到 `versions.json` 之外的版本时，向导会就地询问「仍然继续？」并自动加 `--force`，不用再开 PowerShell 手打参数。
 - **新增词表**：`15-file-menu.json`（文件树右键菜单）、`16-new-chat.json`（新聊天首屏）；新增 `50-double-quoted.json` 支持双引号字面量（`"Text"`）替换，与反引号词表分开匹配，避免误伤标识符。
 - 词表校验增强：`__meta.mode` 声明定界符类型，键值里出现定界符即报错拦截。
+- **`dict-report.mjs` 不再需要日语参考副本**：`../vendor/ja-patch` 缺失时跳过覆盖率比对而不是抛 `ENOENT`，新克隆仓库可直接自查。
 
 ### v0.2.0
 
@@ -108,7 +109,7 @@ node bin/dict-report.mjs
 
 会列出每个词表的条数、与日语原文比对后的未翻译 key（`untranslated keys`），以及三类危险项：值里含反引号/`${`、值里没有中文（说明漏译）、重复 key。
 
-> 其中「对照日语原文」的统计需要本地存在 `../vendor/ja-patch/dictionaries`，该参考副本不随本仓库分发；没有它时其余检查照常工作。
+> 其中「对照日语原文」的统计需要本地存在 `../vendor/ja-patch/dictionaries`，该参考副本不随本仓库分发。没有它时脚本不会报错退出，而是把这部分标为 `skipped`，其余检查（条数、危险项、重复 key）照常输出。
 
 词表的英文 key 复用自日语补丁（MIT）：[TomoyaSasao12/deepai-code-ja-patch](https://github.com/TomoyaSasao12/deepai-code-ja-patch)。
 
