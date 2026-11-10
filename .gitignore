@@ -5,3 +5,4 @@ server-zh.asar
 dist/
 # 临时文件
 *.bak
+build-*.log

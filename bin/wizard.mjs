@@ -4,6 +4,7 @@
  * 由 apply.cmd 以管理员身份调用。刻意放在 Node 里执行（避免 .cmd 的中文/编码问题）。
  */
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline/promises';
 
@@ -46,6 +47,32 @@ process.stdout.write(String(st.stdout ?? '') + String(st.stderr ?? ''));
 if (st.status !== 0) {
 	console.log('\n✗ 没能定位安装目录。请用 --resources "C:\\...\\resources" 手动指定后再试。');
 	process.exit(1);
+}
+
+// 版本不在已验证列表时（典型场景：应用刚自动更新过）在这里询问是否强制继续，
+// 免得用户去开 PowerShell 手打 --force。
+const statusOut = String(st.stdout ?? '');
+const installedVersion = /"version":\s*"([^"]+)"/.exec(statusOut)?.[1] ?? 'unknown';
+const supported = (() => {
+	try {
+		const v = JSON.parse(fs.readFileSync(path.join(ROOT, 'versions.json'), 'utf8'));
+		return Object.keys(v.supported ?? {});
+	} catch {
+		return [];
+	}
+})();
+let force = false;
+if (installedVersion !== 'unknown' && !supported.includes(installedVersion)) {
+	console.log(`\n! 当前安装版本 ${installedVersion} 不在已验证列表（${supported.join(', ')}）中。`);
+	console.log('  通常是应用刚自动更新过：旧补丁被覆盖，词表还没针对这个版本验证。');
+	const rl0 = readline.createInterface({ input: process.stdin, output: process.stdout });
+	const ok = (await rl0.question('  仍然继续构建并应用？(y = 继续 / 其它键 = 取消) ')).trim().toLowerCase();
+	rl0.close();
+	if (ok !== 'y' && ok !== 'yes') {
+		console.log('\n已取消。安装目录没有被修改。');
+		process.exit(0);
+	}
+	force = true;
 }
 
 hr();
@@ -91,6 +118,7 @@ console.log('第 2 步：备份 → 替换 → 校验');
 hr();
 const args = ['apply'];
 if (probeSkipped) args.push('--skip-probe');
+if (force) args.push('--force');
 const a = run(args);
 if ((a.status ?? 1) !== 0) {
 	console.log('\n✗ 应用失败（失败时会自动还原备份，见上面的输出）。');

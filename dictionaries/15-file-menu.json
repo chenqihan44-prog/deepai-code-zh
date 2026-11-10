@@ -1,0 +1,12 @@
+{
+	"__meta": { "part": "文件树/预览右键菜单与「在…中显示」系列（源码里是反引号字面量）" },
+	"Reveal in File Explorer": "在资源管理器中显示",
+	"Reveal in Finder": "在访达中显示",
+	"Reveal in Files": "在文件管理器中显示",
+	"Copy relative path": "复制相对路径",
+	"Copy full path": "复制完整路径",
+	"Copy absolute path": "复制绝对路径",
+	"Copy URL": "复制 URL",
+	"Open containing folder": "打开所在文件夹",
+	"Open in file manager": "在文件管理器中打开"
+}

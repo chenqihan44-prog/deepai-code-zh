@@ -1,7 +1,7 @@
 {
   "name": "deepai-code-zh-patch",
-  "version": "0.2.0",
-  "description": "Unofficial Simplified Chinese UI patch for the DeepAI Code desktop app (Windows/macOS). 1952 dictionary entries. Patches your locally installed app; nothing is redistributed.",
+  "version": "0.3.2",
+  "description": "Unofficial Simplified Chinese UI patch for the DeepAI Code desktop app. 1966 entries + 77 keybinding titles, version-agnostic code patches, build-time JS syntax gate.",
   "license": "MIT",
   "bin": {
     "deepai-code-zh-patch": "bin/patch.mjs"

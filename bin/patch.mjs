@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const BLOCK = 4_194_304;
@@ -114,21 +114,32 @@ function installedVersion(appAsar) {
 }
 
 // ---------------------------------------------------------------- dictionary loading
+//
+// 两类字面量：
+//   * 反引号（默认）—— 绝大多数 UI 文案，包裹形如 `Text`
+//   * 双引号 —— 由词表文件里的 __meta.mode="double" 开启，包裹形如 "Text"
+// 分开处理是刻意的：双引号字符串在压缩后的代码里也可能被当作标识/键使用，
+// 所以只对明确标注过的词表生效。
 function loadDictionaries() {
 	const dir = path.join(ROOT, 'dictionaries');
-	const dict = {};
 	const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json') && !f.startsWith('_')).sort();
-	for (const f of files) Object.assign(dict, JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
-	delete dict.__meta;
-	const rules = Object.entries(dict).map(([en, zh]) => {
-		// 反引号会破坏包裹用的定界符；反斜枔是允许的（下面会统一转义），
-		// 但键必须按源码里的写法书写（源码里通常为 \\\\ 双反斜枔）。
-		if (typeof en !== 'string' || en.includes('`')) throw new Error(`Unsafe key (backtick): ${en}`);
-		if (typeof zh !== 'string' || /`|\$\{/.test(zh) || /\\$/.test(zh)) throw new Error(`Unsafe value for: ${en}`);
-		const escaped = en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-		return { en, zh, regex: new RegExp('`' + escaped + '`', 'g'), hits: 0 };
-	});
-	return { rules, files };
+	const rules = new Map();
+	for (const f of files) {
+		const raw = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+		const mode = raw.__meta?.mode === 'double' ? 'double' : 'backtick';
+		delete raw.__meta;
+		for (const [en, zh] of Object.entries(raw)) {
+			// 定界符本身不能出现在键/值里；反斜枔是允许的（下面统一转义），
+			// 但键必须按源码里的写法书写（模版字面量中的路径是双反斜枔）。
+			if (typeof en !== 'string' || en.includes(mode === 'double' ? '"' : '`')) throw new Error(`Unsafe key (${mode}): ${en}`);
+			if (typeof zh !== 'string' || /`|\$\{/.test(zh) || /\\$/.test(zh)) throw new Error(`Unsafe value for: ${en}`);
+			if (mode === 'double' && zh.includes('"')) throw new Error(`Unsafe double-quoted value: ${en}`);
+			const escaped = en.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			const delim = mode === 'double' ? '"' : '`';
+			rules.set(mode + '\u0000' + en, { en, zh, mode, regex: new RegExp(delim + escaped + delim, 'g'), hits: 0 });
+		}
+	}
+	return { rules: [...rules.values()], files };
 }
 
 function loadCodePatches() {
@@ -146,6 +157,7 @@ function buildPatchedArchive(srcAsar, outPath, { quiet = false } = {}) {
 	const { fd: srcFd, dataStart, header } = readHeader(srcAsar);
 	const patched = new Map(); // archive path -> Buffer
 	let filesScanned = 0, filesChanged = 0;
+	const changedPaths = new Set();
 	const walkClient = (tree, base = '') => {
 		for (const [name, entry] of Object.entries(tree.files ?? {})) {
 			const p = base ? `${base}/${name}` : name;
@@ -157,14 +169,22 @@ function buildPatchedArchive(srcAsar, outPath, { quiet = false } = {}) {
 			fs.readSync(srcFd, buf, 0, entry.size, dataStart + Number(entry.offset));
 			let text = buf.toString('utf8');
 			const original = text;
-			for (const rule of rules) text = text.replace(rule.regex, () => { rule.hits++; return '`' + rule.zh + '`'; });
-			if (text !== original) filesChanged++;
+			for (const rule of rules) {
+				text = text.replace(rule.regex, () => {
+					rule.hits++;
+					const d = rule.mode === 'double' ? '"' : '`';
+					return d + rule.zh + d;
+				});
+			}
+			if (text !== original) { filesChanged++; changedPaths.add(p); }
 			patched.set(p, Buffer.from(text, 'utf8'));
 		}
 	};
 	walkClient(header);
 
-	// 2. code patches (surgical, version-pinned)
+	// 2. code patches（刀尖级修改）
+	// 目标文件不写死：先把 cp.file 当作首选，若该文件名已变或找不到 find 文本，
+	// 则全量搜索已加载的 client 资源。这样应用升级后资产哈希变了也不用改配置。
 	const codePatches = loadCodePatches();
 	const patchLog = [];
 	if (codePatches.length > 0) {
@@ -172,18 +192,58 @@ function buildPatchedArchive(srcAsar, outPath, { quiet = false } = {}) {
 		if (!fs.existsSync(kbPath)) die('missing dictionaries/_keybinding-titles.json');
 		const kbJson = JSON.stringify(JSON.parse(fs.readFileSync(kbPath, 'utf8')));
 		for (const cp of codePatches) {
-			const buf = patched.get(cp.file);
-			if (!buf) { patchLog.push({ file: path.basename(cp.file), skipped: 'file not in this build' }); continue; }
-			const text = buf.toString('utf8');
-			const occurrences = text.split(cp.find).length - 1;
-			if (occurrences === 0) { patchLog.push({ file: path.basename(cp.file), skipped: 'find-text not in this build' }); continue; }
 			const replacement = cp.replace.replaceAll('{{KB_ZH}}', kbJson);
-			patchLog.push({ file: path.basename(cp.file), occurrences });
-			patched.set(cp.file, Buffer.from(text.replaceAll(cp.find, replacement), 'utf8'));
+			let targets = [];
+			if (cp.file && patched.has(cp.file) && patched.get(cp.file).toString('utf8').includes(cp.find)) targets = [cp.file];
+			if (targets.length === 0) {
+				for (const [p, buf] of patched) if (buf.includes(cp.find)) targets.push(p);
+			}
+			if (targets.length === 0) {
+				patchLog.push({ note: (cp.note ?? '').slice(0, 40), skipped: 'find-text not in this build' });
+				continue;
+			}
+			let total = 0;
+			for (const p of targets) {
+				const text = patched.get(p).toString('utf8');
+				const occurrences = text.split(cp.find).length - 1;
+				total += occurrences;
+				patched.set(p, Buffer.from(text.replaceAll(cp.find, replacement), 'utf8'));
+				changedPaths.add(p);
+			}
+			patchLog.push({ file: targets.map((p) => path.basename(p)).join(', '), occurrences: total });
 		}
 	}
 
-	// 3. repack: assign offsets in original tree order, stream-copy untouched payloads
+	// 3. 语法闸门：把每个被改过的 JS 写进临时文件跑 `node --check`。
+	// 这一步专治「字面量替换后在压缩代码里拼出未定义标识符」这类事故
+	// （v0.3.0 就因为在 0.3.28 上把 `d=r||` 插进了错误位置，导致键位页
+	//  报 ReferenceError: rd is not defined）。宁可拒绝构建，也不交给用户。
+	const syntaxErrors = [];
+	if (changedPaths.size > 0) {
+		const checkDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zh-zh-check-'));
+		let i = 0;
+		for (const p of changedPaths) {
+			if (!p.endsWith('.js')) continue;
+			const buf = patched.get(p);
+			const asModule = path.join(checkDir, `m${i}.mjs`);
+			const asScript = path.join(checkDir, `c${i}.js`);
+			fs.writeFileSync(asModule, buf);
+			fs.writeFileSync(asScript, buf);
+			i++;
+			const ok = (f) => spawnSync(process.execPath, ['--check', f], { encoding: 'utf8' }).status === 0;
+			if (!ok(asModule) && !ok(asScript)) {
+				const err = spawnSync(process.execPath, ['--check', asModule], { encoding: 'utf8' }).stderr ?? '';
+				syntaxErrors.push({ file: path.basename(p), error: String(err).split('\n').filter(Boolean).slice(0, 3).join(' | ') });
+			}
+		}
+		fs.rmSync(checkDir, { recursive: true, force: true });
+		if (syntaxErrors.length > 0) {
+			log({ syntaxErrors });
+			die('构建后的 JS 存在语法错误，已中止（安装目录未被修改）。通常是某条 code patch 的 find/replace 不对称导致的。');
+		}
+	}
+
+	// 4. repack: assign offsets in original tree order, stream-copy untouched payloads
 	const tasks = [];
 	let cursor = 0;
 	const plan = (tree, base = '') => {
@@ -360,22 +420,23 @@ async function cmdApply() {
 	}
 	await assertNotRunning();
 
-	// Re-apply handoff: if we already patched this install (backup exists) or the
-	// marker is present, restore the newest backup first so `apply` is idempotent
-	// and always rebuilds from a clean, official archive.
-	const hasBackups = fs.existsSync(path.join(resources, 'zh-patch-backups'));
-	if (hasBackups || detectPatched(serverAsar)) {
-		const backupDir = path.join(resources, 'zh-patch-backups');
-		const all = fs.existsSync(backupDir) ? fs.readdirSync(backupDir).filter((f) => f.endsWith('.asar')).sort() : [];
-		const sameVersion = all.filter((f) => f.startsWith(`server-${version}-`));
-		const pick = sameVersion.length > 0 ? sameVersion[sameVersion.length - 1] : all[all.length - 1];
+	// 幂等重打：只有当「当前归档确实被我们改过」且「存在同版本官方备份」时，
+	// 才先还原再构建。绝不能用旧版本备份去覆盖新版本安装（应用更新后备份会过期）。
+	const backupDir = path.join(resources, 'zh-patch-backups');
+	const backups = fs.existsSync(backupDir) ? fs.readdirSync(backupDir).filter((f) => f.endsWith('.asar')).sort() : [];
+	const sameVersion = backups.filter((f) => f.startsWith(`server-${version}-`));
+	const pick = sameVersion.length > 0 ? sameVersion[sameVersion.length - 1] : undefined;
+	const patched = detectPatched(serverAsar);
+	if (patched) {
 		if (!pick) {
-			if (detectPatched(serverAsar)) die('已安装的 server.asar 已被打过补丁，但 zh-patch-backups 下没有备份。请用你自己的备份还原（或重装应用），然后重新运行 apply。');
-			log('[i/5] 有备份目录但没有备份文件，直接在当前归档上构建。');
-		} else {
-			log(`[i/5] 检测到此前已打过补丁，先自动还原最近的备份 ${pick} ...`);
-			fs.copyFileSync(path.join(backupDir, pick), serverAsar);
+			die('当前 server.asar 已被打过补丁，但 zh-patch-backups 里没有与之同版本（' + version + '）的官方原件。请重装应用或手动换回官方 server.asar 后再运行 apply。');
 		}
+		log(`[i/5] 检测到同版本官方备份 ${pick}，先还原后再构建 ...`);
+		fs.copyFileSync(path.join(backupDir, pick), serverAsar);
+	} else if (backups.length > 0) {
+		const stale = backups.filter((f) => !f.startsWith(`server-${version}-`));
+		if (stale.length > 0) log(`[i/5] 忽略 ${stale.length} 个与当前版本（${version}）不匹配的旧备份；它们通常来自应用更新前的旧版本，不会用于还原。`);
+		log('[i/5] 当前归档是官方原版，直接在它上面构建。');
 	}
 
 	const fuse = checkAsarIntegrityFuse(resources);
@@ -397,7 +458,6 @@ async function cmdApply() {
 		} else log({ probe: 'OK', rootChildren: probe.rootChildren, benignErrors: probe.benignCount });
 	} else log({ probe: 'skipped by --skip-probe' });
 
-	const backupDir = path.join(resources, 'zh-patch-backups');
 	fs.mkdirSync(backupDir, { recursive: true });
 	const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 	const backupPath = path.join(backupDir, `server-${version}-${stamp}.asar`);
@@ -421,13 +481,28 @@ async function cmdApply() {
 function cmdRestore() {
 	const resources = findResources();
 	const serverAsar = path.join(resources, 'server.asar');
+	const appAsar = path.join(resources, 'app.asar');
+	const version = fs.existsSync(appAsar) ? installedVersion(appAsar) : 'unknown';
 	const backupDir = path.join(resources, 'zh-patch-backups');
 	if (!fs.existsSync(backupDir)) die('没有找到备份目录，无需还原。');
 	const backups = fs.readdirSync(backupDir).filter((f) => f.endsWith('.asar')).sort();
 	if (backups.length === 0) die('没有找到备份文件。');
-	const latest = path.join(backupDir, backups[backups.length - 1]);
-	fs.copyFileSync(latest, serverAsar);
-	log(`已还原 ${backups[backups.length - 1]} -> server.asar`);
+
+	// 优先同版本备份；版本不同则绝不自动还原（否则会把应用降级）
+	const sameVersion = backups.filter((f) => f.startsWith(`server-${version}-`));
+	const target = sameVersion.length > 0 ? sameVersion[sameVersion.length - 1] : undefined;
+	if (!target) {
+		const only = backups[backups.length - 1];
+		if (flag('--force') === undefined) {
+			log({ 当前版本: version, 现有备份: backups });
+			die(`没有与当前版本（${version}）匹配的备份。${only} 是其他版本的官方原件，拿它还原会把应用换成错版本。确实需要的请加 --force。`);
+		}
+		fs.copyFileSync(path.join(backupDir, only), serverAsar);
+		log(`[--force] 已用 ${only} 还原 -> server.asar（版本：${only.replace(/^server-|-[0-9TZ.-]+\.asar$/g, '')}）`);
+		return;
+	}
+	fs.copyFileSync(path.join(backupDir, target), serverAsar);
+	log(`已还原 ${target} -> server.asar`);
 }
 
 async function cmdBuild() {

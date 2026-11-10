@@ -1,68 +1,98 @@
 [
-	{
-		"file": "apps/server/dist/client/assets/KeybindingsSettings.logic-o7Cxan79.js",
-		"find": "function P(e){if(e===`thread.settle`)return`Thread: Archive`;",
-		"replace": "var KB_ZH={{KB_ZH}};function P(e){if(KB_ZH[e]!==void 0)return KB_ZH[e];if(e===`thread.settle`)return`Thread: Archive`;",
-		"note": "在键位标题函数开头插入中文标题查表（优先级最高）。{{KB_ZH}} 构建时由 dictionaries/_keybinding-titles.json 替换。文件名为 0.3.20，旧版本会自动跳过。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/KeybindingsSettings.logic-o7Cxan79.js",
-		"find": "`Run Script: ${F(r.slice(7,-4))}`",
-		"replace": "`运行脚本: ${F(r.slice(7,-4))}`",
-		"note": "翻译 Run Script 标题前缀（脚本名本身保持原样）。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/settings.keybindings-7rqH8HIS.js",
-		"find": "placeholder:`Always`",
-		"replace": "placeholder:`始终`",
-		"note": "WHEN 条件输入框的占位符（仅显示）。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/settings.keybindings-7rqH8HIS.js",
-		"find": "d=r||`Always`",
-		"replace": "d=r||`始终`",
-		"note": "空 WHEN 条件的显示回退（仅显示）。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/ChatMarkdown-BqmU2NYg.js",
-		"find": "Open in ${Ai.get(e)??`Editor`}",
-		"replace": "在 ${Ai.get(e)??`Editor`} 中打开",
-		"note": "在 <编辑器名> 中打开（编辑器名是产品名，保持英文）。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/main-B8DFWH-1.js",
-		"find": "Open in ${yr}",
-		"replace": "在 ${yr} 中打开",
-		"note": "命令面板：在 <编辑器名> 中打开。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/PreviewPanel-BYOrP2D6.js",
-		"find": "Open in ${oe}'s browser",
-		"replace": "在 ${oe} 的浏览器中打开",
-		"note": "在 <浏览器名> 中打开。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/settings.projects-DiDOsptD.js",
-		"find": "Open in ${d}",
-		"replace": "在 ${d} 中打开",
-		"note": "项目设置：在 <编辑器名> 中打开。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/ThreadRouteView-DN8Xk5ap.js",
-		"find": "Open in ${M?.label??`editor`}",
-		"replace": "在 ${M?.label??`editor`} 中打开",
-		"note": "侧边栏：在 <编辑器名> 中打开（VS Code 等）。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/WorkspaceTabs-7CVkJou0.js",
-		"find": "Close ${e.title}",
-		"replace": "关闭 ${e.title}",
-		"note": "标签页右键菜单：关闭 <标签名>。"
-	},
-	{
-		"file": "apps/server/dist/client/assets/WorkspaceTabs-7CVkJou0.js",
-		"find": "Close ${t.title}",
-		"replace": "关闭 ${t.title}",
-		"note": "同上，另一种变量名。"
-	}
+ {
+  "file": "apps/server/dist/client/assets/KeybindingsSettings.logic-o7Cxan79.js",
+  "find": "function P(e){if(e===`thread.settle`)return`Thread: Archive`;",
+  "replace": "var KB_ZH={{KB_ZH}};function P(e){if(KB_ZH[e]!==void 0)return KB_ZH[e];if(e===`thread.settle`)return`Thread: Archive`;",
+  "note": "在键位标题函数开头插入中文标题查表（优先级最高）。{{KB_ZH}} 构建时由 dictionaries/_keybinding-titles.json 替换。文件名为 0.3.20，旧版本会自动跳过。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/KeybindingsSettings.logic-o7Cxan79.js",
+  "find": "`Run Script: ${F(r.slice(7,-4))}`",
+  "replace": "`运行脚本: ${F(r.slice(7,-4))}`",
+  "note": "翻译 Run Script 标题前缀（脚本名本身保持原样）。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/settings.keybindings-7rqH8HIS.js",
+  "find": "placeholder:`Always`",
+  "replace": "placeholder:`始终`",
+  "note": "WHEN 条件输入框的占位符（仅显示）。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/settings.keybindings-7rqH8HIS.js",
+  "find": "||`Always`",
+  "replace": "||`始终`",
+  "note": "空 WHEN 条件的显示回退（仅显示）。find/replace 必须对称、不引入变量名，否则会拼出未定义标识符（v0.3.0 因此在 0.3.28 上抛过 rd is not defined）。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/ChatMarkdown-BqmU2NYg.js",
+  "find": "Open in ${Ai.get(e)??`Editor`}",
+  "replace": "在 ${Ai.get(e)??`Editor`} 中打开",
+  "note": "在 <编辑器名> 中打开（编辑器名是产品名，保持英文）。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/main-B8DFWH-1.js",
+  "find": "Open in ${yr}",
+  "replace": "在 ${yr} 中打开",
+  "note": "命令面板：在 <编辑器名> 中打开。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/PreviewPanel-BYOrP2D6.js",
+  "find": "Open in ${oe}'s browser",
+  "replace": "在 ${oe} 的浏览器中打开",
+  "note": "在 <浏览器名> 中打开。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/settings.projects-DiDOsptD.js",
+  "find": "Open in ${d}",
+  "replace": "在 ${d} 中打开",
+  "note": "项目设置：在 <编辑器名> 中打开。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/ThreadRouteView-DN8Xk5ap.js",
+  "find": "Open in ${M?.label??`editor`}",
+  "replace": "在 ${M?.label??`editor`} 中打开",
+  "note": "侧边栏：在 <编辑器名> 中打开（VS Code 等）。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/WorkspaceTabs-7CVkJou0.js",
+  "find": "Close ${e.title}",
+  "replace": "关闭 ${e.title}",
+  "note": "标签页右键菜单：关闭 <标签名>。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/WorkspaceTabs-7CVkJou0.js",
+  "find": "Close ${t.title}",
+  "replace": "关闭 ${t.title}",
+  "note": "同上，另一种变量名。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/ChatMarkdown.js",
+  "find": "Open in ${ki.get(e)??`Editor`}",
+  "replace": "在 ${ki.get(e)??`Editor`} 中打开",
+  "note": "0.3.28+：ChatMarkdown 变量名变更后的变体（在 <编辑器名> 中打开）。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/PreviewPanel.js",
+  "find": "Open in ${I}",
+  "replace": "在 ${I} 中打开",
+  "note": "0.3.28+：预览面板的 Open in <目标>。"
+ },
+ {
+  "file": "apps/server/dist/client/assets/NewChat.js",
+  "find": "children:[`What should we build in `,se,`?`]",
+  "replace": "children:[`在 `,se,` 中想构建什么？`]",
+  "note": "新聊天首屏（JSX 分支）：在 <项目名> 中想构建什么？"
+ },
+ {
+  "file": "apps/server/dist/client/assets/NewChat.js",
+  "find": "`What should we build in ${F}?`",
+  "replace": "`在 ${F} 中想构建什么？`",
+  "note": "新聊天首屏（模板字符串分支）：在 <项目名> 中想构建什么？"
+ },
+ {
+  "file": "apps/server/dist/client/assets/NewChat.js",
+  "find": "${F??`选择项目`} to start",
+  "replace": "${F??`选择项目`} 开始使用",
+  "note": "新聊天首屏：<项目名> 开始使用。注意：词典先把内层 Choose a project 换成了「选择项目」，所以这里必须按替换后的文本匹配。"
+ }
 ]
